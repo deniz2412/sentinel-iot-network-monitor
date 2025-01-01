@@ -1,0 +1,102 @@
+# Go binaries
+/bin/
+/obj/
+
+# Go-specific build artifacts
+*.exe
+*.test
+*.out
+*.apk
+*.dmg
+*.msi
+
+# Go dependency directories
+/vendor/
+
+# Go module files (optional)
+go.sum
+go.mod
+
+# Configuration files
+*.env
+config.json
+config.yaml
+
+# Docker files and directories
+.docker/
+docker-compose.yml
+
+# InfluxDB data (if stored locally)
+influxdb_data/
+
+# RabbitMQ data (if stored locally)
+rabbitmq_data/
+
+# Log files
+*.log
+
+# IDE and editor-specific files
+# IntelliJ IDEA / GoLand
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+
+# Eclipse
+.project
+.classpath
+
+# MacOS specific files
+.DS_Store
+
+# Windows specific files
+Thumbs.db
+Desktop.ini
+
+# Vim swap files
+*.swp
+
+# Generated files
+*.bak
+*.tmp
+*.swp
+*~
+
+# Node.js (if you are using NodeJS in your setup)
+node_modules/
+
+# Python (if used for any setup)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Cloud Platform configurations (Arduino, Firebase, etc.)
+*.json
+
+# Temporary files
+*.out
+*.pid
+
+# Git-related files
+.gitmodules
+.gitconfig
+
+# Backup files (e.g. Sublime, Visual Studio)
+*.sublime-workspace
+*.sublime-project
+
+# MacOS specific files
+Icon?
+
+# Other specific IoT configurations (for example, device files)
+*.bin
+*.hex
+*.elf
+
+# Other IDE specific folders
+*.vscode/
+
+# Documentation and notes
+*.md
