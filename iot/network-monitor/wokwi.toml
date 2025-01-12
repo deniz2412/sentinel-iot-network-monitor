@@ -1,0 +1,9 @@
+[wokwi]
+version = 1
+firmware = 'build/network-monitor.bin'
+elf = 'build/network-monitor.elf'
+gdbServerPort=3333
+[[net.forward]]
+from = "localhost:8180"
+to = "target:80"
+
