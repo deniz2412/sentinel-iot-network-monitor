@@ -100,3 +100,6 @@ Icon?
 
 # Documentation and notes
 *.md
+
+# C build
+/iot/network-monitor/build
