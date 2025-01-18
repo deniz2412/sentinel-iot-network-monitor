@@ -59,7 +59,7 @@ void mqtt_init(const char *uri, const char *user, const char *password) {
         .credentials.authentication.password = password,
         .session.keepalive = 120,
         .session.protocol_ver = MQTT_PROTOCOL_V_5,
-        .outbox.limit=4096
+        .outbox.limit=8192
     };
 
     

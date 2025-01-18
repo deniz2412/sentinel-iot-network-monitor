@@ -5,16 +5,14 @@
 #include <stdbool.h>
 #include <time.h>
 #include "esp_err.h"
-#include "freertos/queue.h"
 
 // Configuration constants
 #define MAX_DEVICES 50
 #define MAX_ACCESS_POINTS 100
 #define MAX_OBSERVED_DEVICES 100
-#define PACKET_QUEUE_LENGTH 800
+#define PACKET_QUEUE_LENGTH 300
 #define MAX_BATCH_SIZE 200
 
-extern QueueHandle_t packet_queue;
 
 typedef struct {
     uint8_t mac[6];

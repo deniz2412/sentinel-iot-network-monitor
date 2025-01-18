@@ -5,8 +5,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/queue.h"
 #include <string.h>
 #include <time.h>
+
 
 static const char *TAG = "MONITORING";
 
@@ -16,12 +18,13 @@ static SemaphoreHandle_t device_list_mutex = NULL;
 static SemaphoreHandle_t mqtt_mutex = NULL;
 // Arrays and counts
 
-QueueHandle_t packet_queue = NULL;
+static QueueHandle_t packet_queue = NULL;
 static access_point_info_t s_access_points[MAX_ACCESS_POINTS];
 static int s_ap_count = 0;
 
 static observed_device_t observed_devices[MAX_OBSERVED_DEVICES];
 static int observed_device_count = 0;
+
 
 static void IRAM_ATTR promiscuous_cb(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (!s_monitoring_active) return;
@@ -262,105 +265,97 @@ void start_device_scan_task(void *param) {
 }
 
 void start_packet_batch_task(void *param) {
-    packet_info_t batch[MAX_BATCH_SIZE];
+    const int batch_threshold = 20; // Batch size before publishing
+    packet_info_t batch[batch_threshold];
     int batch_count = 0;
-    const TickType_t queue_wait_time = pdMS_TO_TICKS(100); // Time to wait for each packet
+    const TickType_t queue_wait_time = pdMS_TO_TICKS(5000); // Queue wait time
 
     while (s_monitoring_active) {
-        // Attempt to receive a packet from the queue with a timeout
+        // Wait for packets from the queue
         packet_info_t packet;
         if (xQueueReceive(packet_queue, &packet, queue_wait_time) == pdPASS) {
-            // Add received packet to the batch
-            if (batch_count < MAX_BATCH_SIZE) {
-                batch[batch_count++] = packet;
-            }
+            batch[batch_count++] = packet; // Add packet to the batch
 
-            // If batch is full, publish it
-            if (batch_count >= MAX_BATCH_SIZE) {
+            // Check if batch size reached the threshold
+            if (batch_count >= batch_threshold) {
                 // Convert batch to JSON and publish
-                size_t json_size = 1024 + (batch_count * 200); // Rough estimate; adjust as necessary
+                size_t json_size = 1024 + (batch_count * 200); // Adjust size estimation
                 char *json_buffer = malloc(json_size);
                 if (json_buffer) {
                     memset(json_buffer, 0, json_size);
-                    // Use a local implementation similar to packets_to_json to serialize the batch
-                    size_t offset = 0;
-                    offset += snprintf(json_buffer + offset, json_size - offset, "{\"packets\":[");
+                    size_t offset = snprintf(json_buffer, json_size, "{\"packets\":[");
+
                     for (int i = 0; i < batch_count; i++) {
                         char timestampStr[25];
                         time_to_iso8601(batch[i].timestamp, timestampStr, sizeof(timestampStr));
-
                         char mac_str[18];
                         snprintf(mac_str, sizeof(mac_str),
                                  "%02x:%02x:%02x:%02x:%02x:%02x",
-                                 batch[i].mac[0], batch[i].mac[1],
-                                 batch[i].mac[2], batch[i].mac[3],
-                                 batch[i].mac[4], batch[i].mac[5]);
+                                 batch[i].mac[0], batch[i].mac[1], batch[i].mac[2],
+                                 batch[i].mac[3], batch[i].mac[4], batch[i].mac[5]);
 
                         offset += snprintf(json_buffer + offset, json_size - offset,
                                            "{\"mac\":\"%s\",\"rssi\":%d,\"length\":%u,\"timestamp\":\"%s\"}",
                                            mac_str, batch[i].rssi, batch[i].length, timestampStr);
+
                         if (i < batch_count - 1) {
-                            if (offset < json_size - 1) {
-                                json_buffer[offset++] = ',';
-                                json_buffer[offset] = '\0';
-                            }
+                            offset += snprintf(json_buffer + offset, json_size - offset, ",");
                         }
                     }
-                    if (offset < json_size - 1) {
-                        snprintf(json_buffer + offset, json_size - offset, "]}");
-                    }
+                    snprintf(json_buffer + offset, json_size - offset, "]}");
 
+                    // Publish to MQTT
                     safe_mqtt_publish("packets", json_buffer);
                     free(json_buffer);
                 } else {
                     ESP_LOGE(TAG, "Failed to allocate JSON buffer for packet batch");
                 }
-                batch_count = 0;  // Reset batch after publishing
+
+                // Reset the batch
+                batch_count = 0;
             }
         } else {
-            // No packet received within wait_time.
-            // If we have collected some packets, we can choose to publish them even if not full.
+            // Timeout while waiting for packets
             if (batch_count > 0) {
+                // Publish remaining packets even if batch isn't full
                 size_t json_size = 1024 + (batch_count * 200);
                 char *json_buffer = malloc(json_size);
                 if (json_buffer) {
                     memset(json_buffer, 0, json_size);
-                    size_t offset = 0;
-                    offset += snprintf(json_buffer + offset, json_size - offset, "{\"packets\":[");
+                    size_t offset = snprintf(json_buffer, json_size, "{\"packets\":[");
+
                     for (int i = 0; i < batch_count; i++) {
                         char timestampStr[25];
                         time_to_iso8601(batch[i].timestamp, timestampStr, sizeof(timestampStr));
-
                         char mac_str[18];
                         snprintf(mac_str, sizeof(mac_str),
                                  "%02x:%02x:%02x:%02x:%02x:%02x",
-                                 batch[i].mac[0], batch[i].mac[1],
-                                 batch[i].mac[2], batch[i].mac[3],
-                                 batch[i].mac[4], batch[i].mac[5]);
+                                 batch[i].mac[0], batch[i].mac[1], batch[i].mac[2],
+                                 batch[i].mac[3], batch[i].mac[4], batch[i].mac[5]);
 
                         offset += snprintf(json_buffer + offset, json_size - offset,
                                            "{\"mac\":\"%s\",\"rssi\":%d,\"length\":%u,\"timestamp\":\"%s\"}",
                                            mac_str, batch[i].rssi, batch[i].length, timestampStr);
+
                         if (i < batch_count - 1) {
-                            if (offset < json_size - 1) {
-                                json_buffer[offset++] = ',';
-                                json_buffer[offset] = '\0';
-                            }
+                            offset += snprintf(json_buffer + offset, json_size - offset, ",");
                         }
                     }
-                    if (offset < json_size - 1) {
-                        snprintf(json_buffer + offset, json_size - offset, "]}");
-                    }
+                    snprintf(json_buffer + offset, json_size - offset, "]}");
 
+                    // Publish to MQTT
                     safe_mqtt_publish("packets", json_buffer);
                     free(json_buffer);
                 } else {
                     ESP_LOGE(TAG, "Failed to allocate JSON buffer for partial packet batch");
                 }
+
+                // Reset the batch
                 batch_count = 0;
             }
         }
     }
+
     ESP_LOGI(TAG, "Packet batch task terminating");
     vTaskDelete(NULL);
 }
