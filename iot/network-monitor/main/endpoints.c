@@ -1,15 +1,9 @@
 #include "endpoints.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
-#include "wifi_manager.h"
-#include "monitoring.h"
-#include "cJSON.h"
-#include <string.h>
-#include <stdio.h>
-#include <time.h>
+#include "monitoring_v2.h"
 
-static const char *TAG = "ENDPOINTS";
-
+/** 
 esp_err_t get_access_points_handler(httpd_req_t *req)
 {
     wifi_ap_info_t *ap_list = NULL;
@@ -36,6 +30,7 @@ esp_err_t get_access_points_handler(httpd_req_t *req)
     free(ap_list);
     return ESP_OK;
 }
+*/
 esp_err_t post_start_monitoring_handler(httpd_req_t *req)
 {
     esp_err_t err = monitoring_start();
@@ -57,7 +52,7 @@ esp_err_t post_stop_monitoring_handler(httpd_req_t *req)
     }
     return ESP_OK;
 }
-
+/** 
 esp_err_t post_clear_monitoring_handler(httpd_req_t *req)
 {
     monitoring_clear();
@@ -150,3 +145,4 @@ esp_err_t get_packets_handler(httpd_req_t *req)
     free(pkt_list);
     return ESP_OK;
 }
+*/

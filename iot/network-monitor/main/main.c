@@ -6,17 +6,16 @@
 #include "esp_netif.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_spiffs.h"
 #include "lwip/apps/sntp.h"
+#include "config_manager.h"
 
 #include <time.h>
 #include <sys/time.h>
 
 #include "wifi_manager.h"
 #include "http_server.h"
-
-// Change these to your default network
-#define DEFAULT_WIFI_SSID     "Wokwi-GUEST"
-#define DEFAULT_WIFI_PASSWORD ""
+#include "mqtt_manager.h"
 
 static const char *TAG = "MAIN";
 
@@ -48,6 +47,27 @@ static void init_sntp(void)
     }
 }
 
+/**
+ * Mounts configurations
+ */
+static void mount_spiffs(void)
+{
+    esp_vfs_spiffs_conf_t conf = {
+        .base_path = "/spiffs",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = false
+    };
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+    if (ret != ESP_OK) {
+        ESP_LOGE("SPIFFS", "Failed to mount or format SPIFFS (0x%x)", ret);
+    } else {
+        ESP_LOGI("SPIFFS", "SPIFFS mounted successfully");
+    }
+
+
+}
+
 void app_main(void)
 {
     esp_err_t ret = nvs_flash_init();
@@ -60,27 +80,33 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+    mount_spiffs();
+
+    config_t config;
+    memset(&config,0,sizeof(config));
+
+    bool got_config = read_config(&config);
+
     ESP_LOGI(TAG, "Initializing Wi-Fi manager...");
     wifi_manager_init();
 
     // Connect to default AP
-    ESP_LOGI(TAG, "Connecting to default Wi-Fi: SSID=%s PASS=%s", 
-        DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASSWORD);
-    esp_err_t conn_err = wifi_manager_connect(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASSWORD);
+    ESP_LOGI(TAG, "Connecting to Wi-Fi: SSID=%s PASS=%s", 
+        config.wifi_ssid, config.wifi_pass);
+    esp_err_t conn_err = wifi_manager_connect(config.wifi_ssid, config.wifi_pass);
     if (conn_err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to connect with default creds, err=0x%x", conn_err);
         // Not fatal
     }
+    esp_log_level_set("*", ESP_LOG_DEBUG);
 
-    // If we want to ensure IP is obtained before setting time, do it in Wi-Fi event
-    // or you can do a short delay here, or wait for ip_event. For demonstration:
     vTaskDelay(pdMS_TO_TICKS(8000)); // wait a bit to connect
     init_sntp(); // fetch real UTC time
 
     // Start HTTP server
-    ESP_LOGI(TAG, "Starting HTTP server...");
     start_http_server();
 
+    mqtt_init(config.mqtt_uri, config.mqtt_user, config.mqtt_pass);
     // Idle loop
     while(true) {
         vTaskDelay(pdMS_TO_TICKS(1000));

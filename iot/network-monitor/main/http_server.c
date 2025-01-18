@@ -15,13 +15,15 @@ void start_http_server(void)
     if (httpd_start(&s_server, &config) == ESP_OK) {
         // Register endpoints
         // AP scanning
+    /*
+
         httpd_uri_t get_aps_uri = {
             .uri       = "/access-points",
             .method    = HTTP_GET,
             .handler   = get_access_points_handler
         };
         httpd_register_uri_handler(s_server, &get_aps_uri);
-
+    */
         // Monitoring start/stop
         httpd_uri_t start_uri = {
             .uri       = "/start-monitoring",
@@ -36,7 +38,7 @@ void start_http_server(void)
             .handler   = post_stop_monitoring_handler
         };
         httpd_register_uri_handler(s_server, &stop_uri);
-
+        /*
         httpd_uri_t clear_uri = {
             .uri       = "/clear-monitoring",
             .method    = HTTP_POST,
@@ -59,7 +61,7 @@ void start_http_server(void)
             .handler   = get_packets_handler
         };
         httpd_register_uri_handler(s_server, &get_packets_uri);
-
+        */
         ESP_LOGI(TAG, "HTTP server started on port %d", config.server_port);
     } else {
         ESP_LOGE(TAG, "Failed to start HTTP server");
