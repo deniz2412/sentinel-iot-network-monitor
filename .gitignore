@@ -19,8 +19,7 @@ go.mod
 
 # Configuration files
 *.env
-config.json
-config.yaml
+
 
 # Docker files and directories
 .docker/
@@ -73,7 +72,6 @@ __pycache__/
 *.pyd
 
 # Cloud Platform configurations (Arduino, Firebase, etc.)
-*.json
 
 # Temporary files
 *.out

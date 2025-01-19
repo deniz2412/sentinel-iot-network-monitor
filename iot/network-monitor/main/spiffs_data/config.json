@@ -1,0 +1,13 @@
+{
+    "wifi": {
+      "ssid": "",
+      "password": ""
+    },
+    "mqtt": {
+      "uri": "mqtt://192.168.196.18",
+      "user": "admin",
+      "password": "admin",
+      "topic_prefix": "sentinel"
+    }
+  }
+  

@@ -1,0 +1,8 @@
+rabbitmq_url: "amqp://admin:admin@localhost:5672/"
+queue_name: "sentinel_queue"
+http_port: "8080"
+influxdb:
+  url: "http://localhost:8086"
+  token: ""
+  org: "sentinel"
+  bucket: "sentinel"

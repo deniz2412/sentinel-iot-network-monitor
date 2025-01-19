@@ -245,7 +245,7 @@ void start_device_scan_task(void *param) {
 
                 char json[1024];
                 snprintf(json, sizeof(json),
-                         "{\"mac\":\"%s\",\"rssi\":%d,\"lastSeen\":\"%s\"\"}",
+                         "{\"mac\":\"%s\",\"rssi\":%d,\"lastSeen\":\"%s\"}",
                          mac_str,
                          local_devices[i].rssi,
                          timestampStr
